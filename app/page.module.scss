@@ -1,0 +1,37 @@
+.mainLayout {
+  display: grid;
+  grid-template-columns: 280px 1fr 400px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.middleColumn {
+  overflow-y: auto;
+  background-color: #f8f9fa;
+}
+
+.rightColumn {
+  border-left: 1px solid #e9ecef;
+  overflow-y: auto;
+  background-color: white;
+}
+
+@media (max-width: 1200px) {
+  .mainLayout {
+    grid-template-columns: 280px 1fr;
+  }
+
+  .rightColumn {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .middleColumn {
+    display: none;
+  }
+}
