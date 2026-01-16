@@ -183,10 +183,8 @@ class ApiService {
     });
   }
 
-  async searchFriends(query: string) {
-    return this.request<User[]>('/friends/search', {
-      method: 'GET',
-    });
+  async searchFriends(query: string): Promise<Friend[]> {
+    return this.request<Friend[]>(`/friends/search?q=${encodeURIComponent(query)}`);
   }
 }
 

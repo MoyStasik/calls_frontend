@@ -1,30 +1,62 @@
+// components/MainContent/MainContent.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './MainContent.module.scss';
-import { Friend } from '../../../app/utils/types';
-import { api } from '@/src/utils/api';
+import { Friend } from '@/app/utils/types';
+import { api } from '../../utils/api';
 
 export default function MainContent() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [friends, setFriends] = useState<Friend[] | null>(null);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [searchResults, setSearchResults] = useState<Friend[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
-    async function fetchFriends() {
-      if (friends) {
-        return;
-      }
+    loadFriends();
+  }, []);
 
-      try {
-        const response = await api.getUserFriends();
-        setFriends(response);
-      } catch (err) {
-        console.error(err);
-      }
+  useEffect(() => {
+    handleSearch();
+  }, [searchQuery]);
+
+  const loadFriends = async () => {
+    try {
+      const data = await api.getUserFriends();
+      setFriends(data);
+    } catch (error) {
+      console.error('Ошибка загрузки друзей:', error);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
     }
 
-    fetchFriends();
-  }, [friends]);
+    setIsSearching(true);
+    try {
+      const results = await api.searchFriends(searchQuery);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Ошибка поиска:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddFriend = async (friendId: string) => {
+    try {
+      await api.addFriend(friendId);
+      await loadFriends(); // Перезагружаем список друзей
+      setSearchResults(prev => prev.filter(f => f.id !== friendId)); // Убираем из результатов поиска
+    } catch (error) {
+      console.error('Ошибка добавления друга:', error);
+    }
+  };
+
+  const displayList = searchQuery.trim() ? searchResults : friends;
 
   return (
     <div className={styles.mainContent}>
@@ -52,36 +84,58 @@ export default function MainContent() {
       </div>
 
       <div className={styles.friendsSection}>
-        <h2 className={styles.sectionTitle}>Ваши друзья</h2>
-        <p className={styles.sectionSubtitle}>Всего друзей: {friends?.length}</p>
+        <h2 className={styles.sectionTitle}>
+          {searchQuery.trim() ? 'Результаты поиска' : 'Ваши друзья'}
+        </h2>
+        <p className={styles.sectionSubtitle}>
+          {searchQuery.trim()
+            ? `Найдено: ${searchResults.length}`
+            : `Всего друзей: ${friends.length}`}
+        </p>
 
         <div className={styles.friendsList}>
-          {friends?.map((friend) => (
-            <div key={friend.id} className={styles.friendCard}>
+          {displayList.map((person) => (
+            <div key={person.id} className={styles.friendCard}>
               <div className={styles.friendAvatarWrapper}>
                 <img
-                  src={friend.avatar}
-                  alt={friend.nickname}
+                  src={person.avatar}
+                  alt={person.nickname}
                   className={styles.friendAvatar}
                 />
-                <span className={`${styles.onlineStatus} ${friend.isOnline ? styles.online : styles.offline}`}></span>
+                <span className={`${styles.onlineStatus} ${person.isOnline ? styles.online : styles.offline}`}></span>
               </div>
 
               <div className={styles.friendInfo}>
-                <h3 className={styles.friendName}>{friend.nickname}</h3>
+                <h3 className={styles.friendName}>{person.nickname}</h3>
                 <div className={styles.statusContainer}>
-                  <span className={styles.statusCode}>{friend.status}</span>
-                  <span className={styles.statusText}>{friend.statusText}</span>
+                  <span className={styles.statusCode}>
+                    {person.status === 'В пути' ? 'gps' :
+                     person.status === 'На тренировке' ? 'baa' :
+                     person.status === 'Ищет приключения' ? 'tav' :
+                     person.status}
+                  </span>
+                  <span className={styles.statusText}>{person.status}</span>
                 </div>
               </div>
 
               <div className={styles.friendActions}>
-                <button className={styles.messageButton}>
-                  💬
-                </button>
-                <button className={styles.moreButton}>
-                  ⋮
-                </button>
+                {searchQuery.trim() && !friends.some(f => f.id === person.id) ? (
+                  <button
+                    className={styles.actionButton}
+                    onClick={() => handleAddFriend(person.id)}
+                  >
+                    Добавить
+                  </button>
+                ) : (
+                  <>
+                    <button className={styles.messageButton}>
+                      💬
+                    </button>
+                    <button className={styles.moreButton}>
+                      ⋮
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
